@@ -16,10 +16,11 @@ def main():
     reader = client.do_get(info.endpoints[0].ticket)
     table = reader.read_all()
     print(f"Received {table.num_rows} rows")
+    print(table.schema)
 
     Path("/app/output").mkdir(parents=True, exist_ok=True)
-    pq.write_table(table, "/app/output/sensor_readings.parquet")
-    print("Wrote /app/output/sensor_readings.parquet")
+    pq.write_table(table, "/app/output/trips_overview.parquet")
+    print("Wrote /app/output/trips_overview.parquet")
 
 if __name__ == "__main__":
     main()
