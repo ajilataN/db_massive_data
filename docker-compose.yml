@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16.11
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: demo
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./app/db-init.sql:/docker-entrypoint-initdb.d/db-init.sql
+
+  flight-server:  
+    build: ./app
+    command: ["python", "server.py"]
+    environment:
+      DB_CONN: postgres://demo:demo@db:5432/demo
+    depends_on:
+      - db
+    ports:
+      - "8815:8815"
+
+  flight-client:
+    build: ./app
+    command: ["python", "client.py"]
+    environment:
+      FLIGHT_URI: grpc://flight-server:8815
+    depends_on:
+      - flight-server
+    volumes:
+      - ./output:/app/output
