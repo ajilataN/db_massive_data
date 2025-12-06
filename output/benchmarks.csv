@@ -1,7 +1,7 @@
 query_label,rows,runs,avg_ms,min_ms,max_ms
-trips_overview_limit_1000,1000,10,67.122,57.993,85.171
-trips_overview_full,20003,10,330.548,322.453,343.137
-user_1_history_limit_500,2,10,17.681,15.967,19.140
-user_1_history_full,2,10,18.075,16.369,21.346
-company_1_stats_limit_365,1,10,23.898,22.236,26.516
-company_1_stats_full,1,10,24.402,23.531,26.059
+trips_overview_limit_1000,1000,10,244.570,189.081,333.800
+trips_overview_full,40003,10,1796.783,1391.911,2488.406
+user_1_history_limit_500,2,10,46.455,40.121,55.797
+user_1_history_full,2,10,49.731,43.811,58.729
+company_1_stats_limit_365,1,10,83.067,58.408,116.826
+company_1_stats_full,1,10,77.391,59.401,102.926
