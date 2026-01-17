@@ -1,7 +1,7 @@
 import os
 import pyarrow as pa
 import psycopg2
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, execute_values
 
 DB_CONN = os.environ.get("DB_CONN", "postgres://demo:demo@db:5432/demo")
 
@@ -104,3 +104,106 @@ def fetch_company_daily_stats(company_id: int, limit: int | None = None) -> pa.T
         sql += " LIMIT %(limit)s"
         params["limit"] = limit
     return run_query(sql, params)
+
+def insert_trips_rows(rows: list[tuple]) -> int:
+    """
+    Bulk insert into trip. Returns number of inserted rows.
+    rows tuples order:
+      (vehicle_id, driver_id, company_id, start_time, end_time,
+       start_location_id, end_location_id, status)
+    """
+    if not rows:
+        return 0
+
+    sql = """
+        INSERT INTO trip (
+            vehicle_id, driver_id, company_id,
+            start_time, end_time,
+            start_location_id, end_location_id,
+            status
+        )
+        VALUES %s
+    """
+
+    conn = psycopg2.connect(DB_CONN)
+    try:
+        with conn.cursor() as cur:
+            execute_values(cur, sql, rows, page_size=5000)
+        conn.commit()
+        return len(rows)
+    finally:
+        conn.close()
+
+
+def insert_trip_participants_rows(rows: list[tuple]) -> int:
+    """
+    Bulk insert into trip_participant. Returns number of inserted rows.
+    rows tuples order:
+      (trip_id, user_id, pickup_location_id, dropoff_location_id, status)
+    """
+    if not rows:
+        return 0
+
+    sql = """
+        INSERT INTO trip_participant (
+            trip_id, user_id,
+            pickup_location_id, dropoff_location_id,
+            status
+        )
+        VALUES %s
+    """
+
+    conn = psycopg2.connect(DB_CONN)
+    try:
+        with conn.cursor() as cur:
+            execute_values(cur, sql, rows, page_size=5000)
+        conn.commit()
+        return len(rows)
+    finally:
+        conn.close()
+
+def fetch_driver_ids(limit: int = 5000) -> pa.Table:
+    sql = """
+        SELECT id
+        FROM "user"
+        WHERE has_drivers_license = TRUE
+        LIMIT %(limit)s
+    """
+    return run_query(sql, {"limit": limit})
+
+
+def fetch_user_ids(limit: int = 5000) -> pa.Table:
+    sql = """
+        SELECT id
+        FROM "user"
+        LIMIT %(limit)s
+    """
+    return run_query(sql, {"limit": limit})
+
+
+def fetch_location_ids(loc_type: str, limit: int = 5000) -> pa.Table:
+    sql = """
+        SELECT id
+        FROM location
+        WHERE type = %(t)s
+        LIMIT %(limit)s
+    """
+    return run_query(sql, {"t": loc_type, "limit": limit})
+
+
+def fetch_trip_ids(limit: int = 5000) -> pa.Table:
+    sql = """
+        SELECT id
+        FROM trip
+        LIMIT %(limit)s
+    """
+    return run_query(sql, {"limit": limit})
+
+def fetch_vehicle_ids(limit: int = 5000) -> pa.Table:
+    sql = """
+        SELECT id
+        FROM vehicle
+        LIMIT %(limit)s
+    """
+    return run_query(sql, {"limit": limit})
+

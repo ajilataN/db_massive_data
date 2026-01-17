@@ -7,13 +7,28 @@ from queries import (
     fetch_trips_overview,
     fetch_user_history,
     fetch_company_daily_stats,
+    insert_trips_rows,
+    insert_trip_participants_rows,
+    fetch_vehicle_ids,
+    fetch_driver_ids,
+    fetch_user_ids,
+    fetch_location_ids,
+    fetch_trip_ids
 )
+
 
 FLIGHT_PORT = int(os.environ.get("FLIGHT_PORT", "8815"))
 
-# “API list” (discoverable endpoints)
-FLIGHTS = ("trips_overview", "user_history", "company_stats")
-
+FLIGHTS = (
+    "trips_overview", "user_history", "company_stats",
+    "ids_vehicle",
+    "ids_driver",
+    "ids_user",
+    "ids_location_home",
+    "ids_location_office",
+    "ids_location_pickup",
+    "ids_trip",
+)
 
 class CommuteFlightServer(fl.FlightServerBase):
     def __init__(self, host: str = "0.0.0.0", port: int = FLIGHT_PORT):
@@ -61,6 +76,34 @@ class CommuteFlightServer(fl.FlightServerBase):
                 limit = int(parts[2]) if len(parts) > 2 else None
                 return fetch_company_daily_stats(company_id, limit)
 
+            if kind == "ids_vehicle":
+                limit = int(parts[1]) if len(parts) > 1 else 5000
+                return fetch_vehicle_ids(limit)
+
+            if kind == "ids_driver":
+                limit = int(parts[1]) if len(parts) > 1 else 5000
+                return fetch_driver_ids(limit)
+
+            if kind == "ids_user":
+                limit = int(parts[1]) if len(parts) > 1 else 5000
+                return fetch_user_ids(limit)
+
+            if kind == "ids_location_home":
+                limit = int(parts[1]) if len(parts) > 1 else 5000
+                return fetch_location_ids("HOME", limit)
+
+            if kind == "ids_location_office":
+                limit = int(parts[1]) if len(parts) > 1 else 5000
+                return fetch_location_ids("OFFICE", limit)
+
+            if kind == "ids_location_pickup":
+                limit = int(parts[1]) if len(parts) > 1 else 5000
+                return fetch_location_ids("PICKUP_POINT", limit)
+
+            if kind == "ids_trip":
+                limit = int(parts[1]) if len(parts) > 1 else 5000
+                return fetch_trip_ids(limit)
+
             print("Unknown query kind:", kind)
             return pa.table({})
 
@@ -90,6 +133,82 @@ class CommuteFlightServer(fl.FlightServerBase):
         descriptor = fl.FlightDescriptor.for_path(*parts)
         tbl = self._get_table_for_descriptor(descriptor)
         return fl.RecordBatchStream(tbl)
+
+
+    def do_put(self, context, descriptor, reader, writer):
+        try:
+            parts = [p.decode() for p in (descriptor.path or [])]
+            if not parts:
+                raise ValueError("Missing descriptor path for DoPut")
+
+            kind = parts[0]
+            total_inserted = 0
+
+            for chunk in reader:
+                batch = chunk.data
+                if batch is None:
+                    continue
+
+                tbl = pa.Table.from_batches([batch])
+                data = tbl.to_pydict()
+                n = tbl.num_rows
+
+                if kind == "insert_trip":
+                    required = [
+                        "vehicle_id", "driver_id", "company_id",
+                        "start_time", "end_time",
+                        "start_location_id", "end_location_id",
+                        "status"
+                    ]
+                    for col in required:
+                        if col not in data:
+                            raise ValueError(f"Missing column '{col}' for insert_trip")
+
+                    rows = [
+                        (
+                            data["vehicle_id"][i],
+                            data["driver_id"][i],
+                            data["company_id"][i],
+                            data["start_time"][i],
+                            data["end_time"][i],
+                            data["start_location_id"][i],
+                            data["end_location_id"][i],
+                            data["status"][i],
+                        )
+                        for i in range(n)
+                    ]
+                    total_inserted += insert_trips_rows(rows)
+
+                elif kind == "insert_trip_participant":
+                    required = [
+                        "trip_id", "user_id",
+                        "pickup_location_id", "dropoff_location_id",
+                        "status"
+                    ]
+                    for col in required:
+                        if col not in data:
+                            raise ValueError(f"Missing column '{col}' for insert_trip_participant")
+
+                    rows = [
+                        (
+                            data["trip_id"][i],
+                            data["user_id"][i],
+                            data["pickup_location_id"][i],
+                            data["dropoff_location_id"][i],
+                            data["status"][i],
+                        )
+                        for i in range(n)
+                    ]
+                    total_inserted += insert_trip_participants_rows(rows)
+
+                else:
+                    raise ValueError(f"Unknown DoPut endpoint: {kind}")
+
+            print(f"DoPut finished: kind={kind}, inserted={total_inserted} rows")
+
+        except Exception as e:
+            print("DoPut error:", e)
+            raise
 
 
 def run_server():
