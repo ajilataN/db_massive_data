@@ -35,31 +35,31 @@ def main():
 
     stats = []  # <-- now collects both inserts and query benchmarks
 
-    # --- DoPut: insert trips
-    trips_table = make_trips_table_from_pools(pools, n=1000, company_id=1)
-    put_trips = do_put_table(
-        client,
-        descriptor=fl.FlightDescriptor.for_path(b"insert_trip"),
-        table=trips_table,
-        batch_size=5000,
-    )
-    print(f"Inserted trips via DoPut: {put_trips['rows']} rows in {put_trips['ms']:.1f} ms")
-    stats.append(_as_single_run_stat("insert_trip", put_trips["rows"], put_trips["ms"]))
+    # # --- DoPut: insert trips
+    # trips_table = make_trips_table_from_pools(pools, n=1000, company_id=1)
+    # put_trips = do_put_table(
+    #     client,
+    #     descriptor=fl.FlightDescriptor.for_path(b"insert_trip"),
+    #     table=trips_table,
+    #     batch_size=5000,
+    # )
+    # print(f"Inserted trips via DoPut: {put_trips['rows']} rows in {put_trips['ms']:.1f} ms")
+    # stats.append(_as_single_run_stat("insert_trip", put_trips["rows"], put_trips["ms"]))
 
     # --- DoPut: insert participants
-    participants_table = make_trip_participants_table_from_pools(
-        pools,
-        n=5000,
-        spread_across_trips=True,
-    )
-    put_parts = do_put_table(
-        client,
-        descriptor=fl.FlightDescriptor.for_path(b"insert_trip_participant"),
-        table=participants_table,
-        batch_size=5000,
-    )
-    print(f"Inserted participants via DoPut: {put_parts['rows']} rows in {put_parts['ms']:.1f} ms")
-    stats.append(_as_single_run_stat("insert_trip_participant", put_parts["rows"], put_parts["ms"]))
+    # participants_table = make_trip_participants_table_from_pools(
+    #     pools,
+    #     n=5000,
+    #     spread_across_trips=True,
+    # )
+    # put_parts = do_put_table(
+    #     client,
+    #     descriptor=fl.FlightDescriptor.for_path(b"insert_trip_participant"),
+    #     table=participants_table,
+    #     batch_size=5000,
+    # )
+    # print(f"Inserted participants via DoPut: {put_parts['rows']} rows in {put_parts['ms']:.1f} ms")
+    # stats.append(_as_single_run_stat("insert_trip_participant", put_parts["rows"], put_parts["ms"]))
 
     suite = [
     # --- Trips overview
@@ -128,7 +128,7 @@ def main():
             )
         )
 
-    write_stats_csv(OUTPUT_DIR, stats)
+    write_stats_csv(OUTPUT_DIR, stats, filename="benchmarks_indexed.csv")
 
 
 if __name__ == "__main__":
