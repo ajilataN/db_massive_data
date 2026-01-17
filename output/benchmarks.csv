@@ -1,7 +1,8 @@
-query_label,rows,runs,avg_ms,min_ms,max_ms
-trips_overview_limit_1000,1000,10,67.122,57.993,85.171
-trips_overview_full,20003,10,330.548,322.453,343.137
-user_1_history_limit_500,2,10,17.681,15.967,19.140
-user_1_history_full,2,10,18.075,16.369,21.346
-company_1_stats_limit_365,1,10,23.898,22.236,26.516
-company_1_stats_full,1,10,24.402,23.531,26.059
+query_label,rows,runs,warmup,avg_ms,min_ms,max_ms,parquet_bytes
+trips_overview_limit_1000,1000,10,1,1084.437,978.625,1206.697,12455
+trips_overview_limit_10000,10000,10,1,1299.903,1191.394,1464.329,86485
+trips_overview_full,400003,10,1,7868.812,7527.772,8385.676,2844407
+user_1_history_limit_500,2,10,1,40.558,37.119,44.195,2168
+user_1_history_full,2,10,1,41.970,40.343,44.784,2168
+company_1_stats_limit_365,1,10,1,502.891,480.004,564.676,1135
+company_1_stats_full,1,10,1,488.115,474.245,501.399,1135

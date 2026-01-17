@@ -8,9 +8,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      - db-data:/var/lib/postgresql/data
       - ./app/db-init.sql:/docker-entrypoint-initdb.d/db-init.sql
 
-  flight-server:  
+  flight-server:
     build: ./app
     command: ["python", "server.py"]
     environment:
@@ -29,3 +30,6 @@ services:
       - flight-server
     volumes:
       - ./output:/app/output
+
+volumes:
+  db-data:

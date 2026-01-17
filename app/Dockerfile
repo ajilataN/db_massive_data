@@ -4,6 +4,6 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir pyarrow psycopg2-binary
 
-COPY server.py client.py ./
+COPY *.py ./
 
 CMD ["sh", "-c", "python server.py"]

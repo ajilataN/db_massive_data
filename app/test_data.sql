@@ -1,17 +1,21 @@
 INSERT INTO company (name)
 SELECT 'Company_' || g
-FROM generate_series(3, 22) AS g;
+FROM generate_series(3, 52) AS g;
 
 
 INSERT INTO location (city, postal_code, street, street_no, country, type)
 SELECT
   'Ljubljana',
   1000 + (g % 10),
-  'Street_' || (g % 50),
-  (1 + (g % 120))::text,
+  'Street_' || (g % 300),
+  (1 + (g % 500))::text,
   'Slovenia',
-  CASE WHEN g % 3 = 0 THEN 'OFFICE' ELSE 'HOME' END
-FROM generate_series(7, 506) AS g;
+  CASE
+    WHEN g % 10 = 0 THEN 'PICKUP_POINT'
+    WHEN g % 3 = 0 THEN 'OFFICE'
+    ELSE 'HOME'
+  END
+FROM generate_series(7, 5006) AS g;
 
 
 INSERT INTO company_location (company_id, location_id, is_primary)
@@ -23,8 +27,9 @@ FROM company c
 JOIN LATERAL (
     SELECT id
     FROM location
+    WHERE type IN ('OFFICE', 'PICKUP_POINT')
     ORDER BY random()
-    LIMIT 3
+    LIMIT 5
 ) l ON TRUE;
 
 
@@ -32,11 +37,11 @@ INSERT INTO "user" (name, surname, has_drivers_license, company_id, home_locatio
 SELECT
   'User_' || g,
   'Surname_' || g,
-  (g % 2 = 0),
+  (g % 5 <> 0),
   (SELECT id FROM company ORDER BY random() LIMIT 1),
   (SELECT id FROM location WHERE type = 'HOME' ORDER BY random() LIMIT 1),
   (SELECT id FROM company_location ORDER BY random() LIMIT 1)
-FROM generate_series(5, 10004) AS g;
+FROM generate_series(5, 50004) AS g;
 
 
 INSERT INTO vehicle_type (type, capacity)
@@ -53,8 +58,11 @@ SELECT
       (SELECT id FROM "user" WHERE has_drivers_license ORDER BY random() LIMIT 1)
     ELSE NULL
   END,
-  (SELECT id FROM vehicle_type ORDER BY random() LIMIT 1)
-FROM generate_series(4, 203) AS g;
+  CASE
+    WHEN g % 10 = 0 THEN (SELECT id FROM vehicle_type WHERE type = 'VAN' LIMIT 1)
+    ELSE (SELECT id FROM vehicle_type WHERE type = 'CAR' LIMIT 1)
+  END
+FROM generate_series(4, 2003) AS g;
 
 
 INSERT INTO trip (vehicle_id, driver_id, company_id, start_time, end_time, start_location_id, end_location_id, status)
@@ -62,15 +70,25 @@ SELECT
   (SELECT id FROM vehicle ORDER BY random() LIMIT 1) AS vehicle_id,
   (SELECT id FROM "user" WHERE has_drivers_license ORDER BY random() LIMIT 1) AS driver_id,
   (SELECT id FROM company ORDER BY random() LIMIT 1) AS company_id,
-  NOW() - ((g % 120) * INTERVAL '1 day') - ((g % 24) * INTERVAL '1 hour') AS start_time,
-  NOW() - ((g % 120) * INTERVAL '1 day') - (((g % 24) - 1) * INTERVAL '1 hour') AS end_time,
-  (SELECT id FROM location WHERE type = 'HOME' ORDER BY random() LIMIT 1) AS start_location_id,
+  NOW()
+    - ((g % 365) * INTERVAL '1 day')
+    - ((g % 24) * INTERVAL '1 hour')
+    - ((g % 60) * INTERVAL '1 minute') AS start_time,
+  CASE
+    WHEN g % 20 = 0 THEN NULL
+    ELSE NOW()
+      - ((g % 365) * INTERVAL '1 day')
+      - (((g % 24) - 1) * INTERVAL '1 hour')
+      - ((g % 60) * INTERVAL '1 minute')
+  END AS end_time,
+  (SELECT id FROM location WHERE type IN ('HOME','PICKUP_POINT') ORDER BY random() LIMIT 1) AS start_location_id,
   (SELECT id FROM location WHERE type = 'OFFICE' ORDER BY random() LIMIT 1) AS end_location_id,
   CASE
-    WHEN g % 10 = 0 THEN 'CANCELLED'
+    WHEN g % 50 = 0 THEN 'CANCELLED'
+    WHEN g % 20 = 0 THEN 'IN_PROGRESS'
     ELSE 'COMPLETED'
-  END
-FROM generate_series(4, 20003) AS g;
+  END AS status
+FROM generate_series(4, 200003) AS g;
 
 
 INSERT INTO trip_participant (trip_id, user_id, pickup_location_id, dropoff_location_id, status)
@@ -79,7 +97,11 @@ SELECT
   (SELECT id FROM "user" ORDER BY random() LIMIT 1),
   t.start_location_id,
   t.end_location_id,
-  'JOINED'
+  CASE
+    WHEN random() < 0.02 THEN 'CANCELLED'
+    WHEN random() < 0.03 THEN 'NO_SHOW'
+    ELSE 'JOINED'
+  END AS status
 FROM trip t
 JOIN generate_series(1, 4) AS g ON TRUE
-WHERE random() < 0.8;
+WHERE random() < 0.55;
